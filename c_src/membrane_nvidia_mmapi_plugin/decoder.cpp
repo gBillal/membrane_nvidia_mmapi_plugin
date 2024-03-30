@@ -27,9 +27,11 @@ int qBuffer(State* state, UnifexPayload* payload, int64_t timestamp) {
     v4l2_buf.m.planes = planes;
     v4l2_buf.m.planes[0].bytesused = buffer->planes[0].bytesused;
     
-    v4l2_buf.flags |= V4L2_BUF_FLAG_TIMESTAMP_COPY;
-    v4l2_buf.timestamp.tv_sec = timestamp / (MICROSECOND_UNIT);
-    v4l2_buf.timestamp.tv_usec = timestamp % (MICROSECOND_UNIT);
+    if (payload != NULL) {
+        v4l2_buf.flags |= V4L2_BUF_FLAG_TIMESTAMP_COPY;
+        v4l2_buf.timestamp.tv_sec = timestamp / (MICROSECOND_UNIT);
+        v4l2_buf.timestamp.tv_usec = timestamp % (MICROSECOND_UNIT);
+    }
 
     state->buf_idx = (state->buf_idx + 1) % MAX_BUFFERS;
 
@@ -168,23 +170,25 @@ int getDecodedFrames(UnifexEnv *env, State* state, UnifexPayload*** ret_frames, 
     while(true) {
         struct v4l2_buffer v4l2_buf;
         struct v4l2_plane planes[MAX_PLANES];
-        NvBuffer* buffer;
+        NvBuffer* buffer = NULL;
 
         memset(&v4l2_buf, 0, sizeof(v4l2_buf));
         memset(planes, 0, sizeof(planes));
         v4l2_buf.m.planes = planes;
 
-        ret = state->dec->capture_plane.dqBuffer(v4l2_buf, &buffer, NULL, 10);
-        if (errno == EAGAIN) {
-            // If all the buffers are queued, we'll wait for the decoder
-            // to decode at least one frame
-            if (full_output_plane && total_frames == 0) continue;
+        if(state->dec->capture_plane.dqBuffer(v4l2_buf, &buffer, NULL, 0)) {
+            if (errno == EAGAIN) {
+                // If it's the end of stream, we'll wait for all the frames to be decoded
+                // or if all the buffers are queued, we'll wait for the decoder
+                // to decode at least one frame
+                int last_buf = v4l2_buf.flags & V4L2_BUF_FLAG_LAST;
+                if ((state->eos && !last_buf) || (full_output_plane && total_frames == 0)) {
+                    continue;
+                }
 
-            // If it's the end of stream, we'll wait for all the frames to be decoded
-            if (state->eos && !(v4l2_buf.flags & V4L2_BUF_FLAG_LAST)) continue;
-
-            break;
-        } else if (ret < 0) return ERR_CAPTURE_PLANE_DQ_Buffer;
+                break;
+            } else return ERR_CAPTURE_PLANE_DQ_Buffer;
+        }
 
         NvBufSurf::NvCommonTransformParams transform_params;
         transform_params.flag = NVBUFSURF_TRANSFORM_FILTER;
@@ -282,7 +286,7 @@ UNIFEX_TERM decode(UnifexEnv *env, UnifexPayload* payload, int64_t timestamp, St
     if (state->wait_for_resolution_event && setCapturePlane(state) < 0) {
         return decode_result_error(env, "set_capture_plane");
     }
-
+    
     if (getDecodedFrames(env, state, &out_frames, &out_pts, total_frames) < 0) {
         return decode_result_error(env, "getDecodedFrames");
     }
@@ -321,10 +325,7 @@ UNIFEX_TERM flush(UnifexEnv* env, State* state) {
         return decode_result_error(env, "getDecodedFrames");
     }
 
-    ret = dqBuffer(state);
-    if (ret < 0) {
-        return decode_result_error(env, "dqBuffer");
-    }
+    while(dqBuffer(state) == 0);
 
     res = decode_result_ok(env, out_frames, total_frames, out_pts, total_frames);
     
@@ -342,6 +343,7 @@ UNIFEX_TERM flush(UnifexEnv* env, State* state) {
 
 void handle_destroy_state(UnifexEnv* env, State* state) {
     if (state->dec != NULL) delete state->dec;
+    if (state->dst_dma_fd != -1) NvBufSurf::NvDestroy(state->dst_dma_fd);
 
     UNIFEX_UNUSED(env);
     UNIFEX_UNUSED(state);

@@ -8,7 +8,7 @@
 #include "NvUtils.h"
 
 #define MICROSECOND_UNIT 1000000
-#define MAX_BUFFERS 10
+#define MAX_BUFFERS 5
 #define CHUNK_SIZE 4000000
 
 typedef struct _decoder_state {

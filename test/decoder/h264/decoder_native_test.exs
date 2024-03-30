@@ -1,4 +1,4 @@
-defmodule Decoder.NativeTest do
+defmodule Decoder.H264.NativeTest do
   use ExUnit.Case, async: true
 
   alias Membrane.Nvidia.MMAPI.Decoder.Native
@@ -21,7 +21,6 @@ defmodule Decoder.NativeTest do
 
   test "Decode and scale 1 240p frame" do
     in_path = "test/fixtures/h264/input-100-240p.h264"
-    ref_path = "image2.raw"
 
     assert {:ok, file} = File.read(in_path)
     assert {:ok, decoder_ref} = Native.create(:H264, 160, 120)

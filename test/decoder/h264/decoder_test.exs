@@ -1,5 +1,5 @@
 defmodule DecoderTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Membrane.Pipeline
 
   import Membrane.Testing.Assertions
