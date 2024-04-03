@@ -5,9 +5,8 @@ defmodule Membrane.Nvidia.MMAPI.Decoder do
 
   require Membrane.Logger
 
-  alias Membrane.Buffer
   alias __MODULE__.Native
-  alias Membrane.{H264, H265}
+  alias Membrane.{Buffer, H264, H265}
   alias Membrane.RawVideo
 
   def_options width: [
@@ -35,10 +34,7 @@ defmodule Membrane.Nvidia.MMAPI.Decoder do
 
   @impl true
   def handle_init(_ctx, opts) do
-    state =
-      Map.from_struct(opts)
-      |> Map.merge(%{decoder_ref: nil, format_changed?: false, use_shm?: false})
-
+    state = Map.merge(Map.from_struct(opts), %{decoder_ref: nil})
     {[], state}
   end
 
@@ -69,7 +65,7 @@ defmodule Membrane.Nvidia.MMAPI.Decoder do
          %{state | decoder_ref: Native.create!(codec, width, height)}}
 
       old_stream_format != stream_format ->
-        raise "This element does not support stream format change."
+        raise "This element does not support different stream format."
 
       true ->
         {[], state}
@@ -78,7 +74,7 @@ defmodule Membrane.Nvidia.MMAPI.Decoder do
 
   @impl true
   def handle_buffer(:input, buffer, _ctx, %{decoder_ref: decoder_ref} = state) do
-    case Native.decode(buffer.payload, buffer.pts, decoder_ref) do
+    case Native.decode(buffer.payload, buffer.pts || 0, decoder_ref) do
       {:ok, frames, pts_list} ->
         {wrap_frames(frames, pts_list), state}
 

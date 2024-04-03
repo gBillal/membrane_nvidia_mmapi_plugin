@@ -7,13 +7,10 @@ A collection of elements that leverage the Nvidia Jetson hardware using [Multime
 
 ## Elements
 The plugin will contain the following elements:
-| Element | Codecs | Description | Status |
-|---------|--------|-------------|--------|
-| Decoder | H264,H265 | Hardware video decoder | Implemented |
-| Encoder | H264,H265 | Hardware video encoder | Planned | 
-| Transcoder | H264,H265 | Hardware video transcoder | Planned | 
-| Jpeg Encoder | I420 | Hardware jpeg encoder | Planned | 
-| Jpeg Decoder | I420 | Hardware jpeg decoder | Planned | 
+| Element | Input Format | Output Format | Description | Status |
+|---------|--------------|---------------|-------------|--------|
+| Decoder | H264,H265 | I420 | Hardware video decoder | Implemented |
+| Encoder | I420 | H264,H265 | Hardware video encoder | Planned | 
 
 ## Installation
 
@@ -29,4 +26,4 @@ end
 
 ## Usage
 
-### Video Encoder
+See `examples` folder.
