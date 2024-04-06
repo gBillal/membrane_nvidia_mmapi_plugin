@@ -7,6 +7,7 @@ A collection of elements that leverage the Nvidia Jetson hardware using [Multime
 
 ## Elements
 The plugin will contain the following elements:
+
 | Element | Input Format | Output Format | Description | Status |
 |---------|--------------|---------------|-------------|--------|
 | Decoder | H264,H265 | I420 | Hardware video decoder | Implemented |

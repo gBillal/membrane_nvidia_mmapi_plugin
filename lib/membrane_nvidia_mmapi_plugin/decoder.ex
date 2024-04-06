@@ -1,5 +1,10 @@
 defmodule Membrane.Nvidia.MMAPI.Decoder do
-  @moduledoc false
+  @moduledoc """
+  Membrane element that decodes video in H264 or H265 format using the Jetson hardware decoder based on V4L2 interface.
+
+  The element expects the received buffers to contain an integral access units.
+  It also supports scaling the decoded frames using the `VIC` hardware accelerator.
+  """
 
   use Membrane.Filter
 
@@ -12,12 +17,20 @@ defmodule Membrane.Nvidia.MMAPI.Decoder do
   def_options width: [
                 spec: non_neg_integer(),
                 default: nil,
-                description: "Scale the decoded picture to the provided width."
+                description: """
+                Scale the decoded picture to the provided width.
+
+                If height is not provided, it'll be calculated to keep the aspect ratio.
+                """
               ],
               height: [
                 spec: non_neg_integer(),
                 default: nil,
-                description: "Scale the decoded picture to the provided height."
+                description: """
+                Scale the decoded picture to the provided height.
+
+                If width is not provided, it'll be calculated to keep the aspect ratio.
+                """
               ]
 
   def_input_pad :input,

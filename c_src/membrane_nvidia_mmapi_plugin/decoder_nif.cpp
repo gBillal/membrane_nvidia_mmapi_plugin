@@ -39,19 +39,20 @@ void dmabufToPayload(int dmabuf_fd, uint total_planes, UnifexPayload* payload)
 pair<vector<UnifexPayload*>, vector<int64_t>> getDecodedFrames(UnifexEnv* env, State* state)
 {
     vector<UnifexPayload*> frames;
-    vector<int64_t> pts;
+    vector<int64_t> pts_list;
     
     while(auto pair = state->dec->nextFrame())
     {
+        auto [fd, pts] { *pair };
         UnifexPayload* payload = (UnifexPayload*)unifex_alloc(sizeof(UnifexPayload));
         unifex_payload_alloc(env, UNIFEX_PAYLOAD_BINARY, state->dec->frameSize(), payload);
-        dmabufToPayload(get<int>(*pair), 3, payload);
+        dmabufToPayload(fd, 3, payload);
         
         frames.push_back(payload);
-        pts.push_back(get<int64_t>(*pair));
+        pts_list.push_back(pts);
     }
 
-    return std::make_pair(frames, pts);
+    return {frames, pts_list};
 }
 
 UNIFEX_TERM create(UnifexEnv *env, char* pix_fmt, int width, int height) {
@@ -74,15 +75,13 @@ UNIFEX_TERM decode(UnifexEnv *env, UnifexPayload* payload, int64_t timestamp, St
 
     try {
         state->dec->process(payload->data, payload->size, timestamp);
-        auto frames_and_pts = getDecodedFrames(env, state);
-        auto frames = frames_and_pts.first;
-        auto pts = frames_and_pts.second;
+        auto [frames, pts] = getDecodedFrames(env, state);
 
         res = decode_result_ok(env, frames.data(), frames.size(), pts.data(), pts.size());
 
-        for (size_t i = 0; i < frames.size(); i++) {
-            unifex_payload_release(frames[i]);
-            unifex_free(frames[i]);
+        for (auto frame : frames) {
+            unifex_payload_release(frame);
+            unifex_free(frame);
         }
     } catch (exception& e) {
         res = decode_result_error(env, e.what());
@@ -96,15 +95,13 @@ UNIFEX_TERM flush(UnifexEnv* env, State* state) {
 
     try {
         state->dec->flush();
-        auto frames_and_pts = getDecodedFrames(env, state);
-        auto frames = frames_and_pts.first;
-        auto pts = frames_and_pts.second;
+        auto [frames, pts] = getDecodedFrames(env, state);
 
         res = decode_result_ok(env, frames.data(), frames.size(), pts.data(), pts.size());
     
-        for (size_t i = 0; i < frames.size(); i++) {
-            unifex_payload_release(frames[i]);
-            unifex_free(frames[i]);
+        for (auto frame : frames) {
+            unifex_payload_release(frame);
+            unifex_free(frame);
         }
     } catch (exception& e) {
         res = decode_result_error(env, e.what());

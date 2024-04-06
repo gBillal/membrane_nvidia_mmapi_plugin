@@ -44,30 +44,30 @@ Decoder* Decoder::createDecoder(const char* pix_fmt, int width, int height)
     }
 
     Decoder* decoder = new Decoder();
-    decoder->dec = dec;
-    decoder->width = width;
-    decoder->height = height;
+    decoder->m_dec = dec;
+    decoder->m_width = width;
+    decoder->m_height = height;
     
     return decoder;
 }
 
-int Decoder::frameSize() {return width * height * 3 / 2;}
+int Decoder::frameSize() {return m_width * m_height * 3 / 2;}
 
 void Decoder::process(unsigned char* data, int size, int64_t pts)
 {
     this->qBuffer(data, size, pts);
-    if (this->waiting_for_resolution_event) this->setCapturePlane();
+    if (this->m_waitingForResolutionEvent) this->setCapturePlane();
 }
 
 void Decoder::flush()
 {
-    this->eos = true;
+    this->m_eos = true;
     this->qBuffer(NULL, 0, 0);
 }
 
 optional<pair<int, int64_t>> Decoder::nextFrame()
 {
-    bool full_output_plane = this->dec->output_plane.getNumQueuedBuffers() == MaxBuffers;
+    bool full_output_plane = this->m_dec->output_plane.getNumQueuedBuffers() == MaxBuffers;
 
     struct v4l2_buffer v4l2_buf;
     struct v4l2_plane planes[MAX_PLANES];
@@ -77,46 +77,50 @@ optional<pair<int, int64_t>> Decoder::nextFrame()
     memset(planes, 0, sizeof(planes));
     v4l2_buf.m.planes = planes;
 
-    while(this->dec->capture_plane.dqBuffer(v4l2_buf, &buffer, NULL, 0))
+    while(this->m_dec->capture_plane.dqBuffer(v4l2_buf, &buffer, NULL, 0))
     {
         if (errno == EAGAIN) {
             // If it's the end of stream, we'll wait for all the frames to be decoded
             // or if all the buffers are queued, we'll wait for the decoder
             // to decode at least one frame
             int last_buf = v4l2_buf.flags & V4L2_BUF_FLAG_LAST;
-            if (this->eos && !last_buf) continue;
+            if (this->m_eos && !last_buf) continue;
             else if (full_output_plane) continue;
             else return nullopt;
         } 
         
-        throw std::runtime_error("could not dequeue buffer to capture plane");
+        throw std::runtime_error("could not dequeue buffer from capture plane");
     }
 
-    dqBuffer();
+    if (dqBuffer() < 0) 
+    {
+        throw std::runtime_error("could not dequeue buffer from output plane");
+    }
 
     NvBufSurf::NvCommonTransformParams transform_params;
     transform_params.flag = NVBUFSURF_TRANSFORM_FILTER;
     transform_params.flip = NvBufSurfTransform_None;
     transform_params.filter = NvBufSurfTransformInter_Nearest;
     
-    if (NvBufSurf::NvTransform(&transform_params, buffer->planes[0].fd, this->dst_dma_fd) < 0)
+    if (NvBufSurf::NvTransform(&transform_params, buffer->planes[0].fd, this->m_dstDmaFd) < 0)
     {
         throw std::runtime_error("could not transform DMA buffer");
     }
 
-    if (this->dec->capture_plane.qBuffer(v4l2_buf, NULL) < 0)
+    if (this->m_dec->capture_plane.qBuffer(v4l2_buf, NULL) < 0)
     {
         throw std::runtime_error("could not queue buffer to capture plane");
     }
 
-    return make_optional(std::make_pair(dst_dma_fd, v4l2_buf.timestamp.tv_sec * Microsecond + v4l2_buf.timestamp.tv_usec));
+    int64_t pts = v4l2_buf.timestamp.tv_sec * Microsecond + v4l2_buf.timestamp.tv_usec;
+    return make_optional(make_pair(m_dstDmaFd, pts));
 }
 
 Decoder::~Decoder()
 {
     while(dqBuffer() == 0);
-    delete this->dec;
-    if (dst_dma_fd != -1) NvBufSurf::NvDestroy(dst_dma_fd);
+    delete this->m_dec;
+    if (m_dstDmaFd != -1) NvBufSurf::NvDestroy(m_dstDmaFd);
 }
 
 void Decoder::qBuffer(unsigned char* data, int size, int64_t pts) 
@@ -124,7 +128,7 @@ void Decoder::qBuffer(unsigned char* data, int size, int64_t pts)
     struct v4l2_buffer v4l2_buf;
     struct v4l2_plane planes[MAX_PLANES];
 
-    NvBuffer* buffer = this->dec->output_plane.getNthBuffer(this->bufIdx);
+    NvBuffer* buffer = this->m_dec->output_plane.getNthBuffer(this->m_bufIdx);
     if (data != NULL) {
         buffer->planes[0].data = data;
         buffer->planes[0].bytesused = size;
@@ -135,7 +139,7 @@ void Decoder::qBuffer(unsigned char* data, int size, int64_t pts)
     memset(&v4l2_buf, 0, sizeof(v4l2_buf));
     memset(planes, 0, sizeof(planes));
 
-    v4l2_buf.index = this->bufIdx;
+    v4l2_buf.index = this->m_bufIdx;
     v4l2_buf.m.planes = planes;
     v4l2_buf.m.planes[0].bytesused = buffer->planes[0].bytesused;
     
@@ -145,9 +149,9 @@ void Decoder::qBuffer(unsigned char* data, int size, int64_t pts)
         v4l2_buf.timestamp.tv_usec = pts % Microsecond;
     }
 
-    this->bufIdx = (this->bufIdx + 1) % MaxBuffers;
+    this->m_bufIdx = (this->m_bufIdx + 1) % MaxBuffers;
 
-    if(this->dec->output_plane.qBuffer(v4l2_buf, NULL) < 0)
+    if(this->m_dec->output_plane.qBuffer(v4l2_buf, NULL) < 0)
     {
         throw std::runtime_error("could not queue buffer to output plane");
     }
@@ -162,12 +166,12 @@ int Decoder::dqBuffer() {
 
     v4l2_buf.m.planes = planes;
 
-    return this->dec->output_plane.dqBuffer(v4l2_buf, NULL, NULL, -1);
+    return this->m_dec->output_plane.dqBuffer(v4l2_buf, NULL, NULL, -1);
 }
 
 void Decoder::setCapturePlane() 
 {
-    NvVideoDecoder* dec = this->dec;
+    NvVideoDecoder* dec = this->m_dec;
     struct v4l2_event event;
 
     do {
@@ -189,18 +193,18 @@ void Decoder::setCapturePlane()
         throw std::runtime_error("could not get crop from capture plane");
     }
 
-    this->width = this->width == -1 ? crop.c.width : this->width;
-    this->height = this->height == -1 ? crop.c.height : this->height;
+    this->m_width = this->m_width == -1 ? crop.c.width : this->m_width;
+    this->m_height = this->m_height == -1 ? crop.c.height : this->m_height;
 
     NvBufSurf::NvCommonAllocateParams params;
     params.memType = NVBUF_MEM_SURFACE_ARRAY;
-    params.width = this->width;
-    params.height = this->height;
+    params.width = this->m_width;
+    params.height = this->m_height;
     params.layout = NVBUF_LAYOUT_PITCH;
     params.colorFormat = NVBUF_COLOR_FORMAT_YUV420;
     params.memtag = NvBufSurfaceTag_VIDEO_CONVERT;
 
-    if (NvBufSurf::NvAllocate(&params, 1, &this->dst_dma_fd) < 0) {
+    if (NvBufSurf::NvAllocate(&params, 1, &this->m_dstDmaFd) < 0) {
         throw std::runtime_error("could not allocate DMA buffer");
     }
 
@@ -241,5 +245,5 @@ void Decoder::setCapturePlane()
         }
     }
 
-    this->waiting_for_resolution_event = false;
+    this->m_waitingForResolutionEvent = false;
 }

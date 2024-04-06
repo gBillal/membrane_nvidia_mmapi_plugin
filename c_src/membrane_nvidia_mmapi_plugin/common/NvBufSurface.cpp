@@ -30,7 +30,7 @@ int
 NvBufSurf::NvAllocate(NvCommonAllocateParams *allocateParams, uint32_t numBuffers, int *fd)
 {
     int ret = 0;
-    NvBufSurfaceAllocateParams input_params = {{0}};
+    NvBufSurfaceAllocateParams input_params {};
 
     if (numBuffers < 1 || allocateParams == NULL)
       return -1;
@@ -57,8 +57,8 @@ NvBufSurf::NvTransform(NvCommonTransformParams *transformParams, int src_fd, int
     int ret = 0;
     if (transformParams == NULL)
       return -1;
-    NvBufSurfTransformRect src_rect = {0};
-    NvBufSurfTransformRect dest_rect = {0};
+    NvBufSurfTransformRect src_rect {};
+    NvBufSurfTransformRect dest_rect {};
     NvBufSurfTransformParams transform_params;
     NvBufSurface *nvbuf_surf_src = 0;
     NvBufSurface *nvbuf_surf_dst = 0;

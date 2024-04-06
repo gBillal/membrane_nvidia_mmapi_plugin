@@ -10,16 +10,16 @@ class Decoder
 {
 private:
     static const int Microsecond = 1000000;
-    static const int MaxBuffers = 5;
+    static const int MaxBuffers = 10;
     static const int MaxFrameSize = 4000000;
 
-    NvVideoDecoder* dec;
-    int width;
-    int height;
-    int dst_dma_fd = -1;
-    int bufIdx;
-    bool waiting_for_resolution_event = true;
-    bool eos = false;
+    NvVideoDecoder* m_dec;
+    int m_width;
+    int m_height;
+    int m_dstDmaFd = -1;
+    int m_bufIdx;
+    bool m_waitingForResolutionEvent = true;
+    bool m_eos = false;
 
     void qBuffer(unsigned char* data, int size, int64_t pts);
     int dqBuffer();

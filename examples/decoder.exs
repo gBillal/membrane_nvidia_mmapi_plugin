@@ -1,8 +1,8 @@
 Logger.configure(level: :info)
 
 Mix.install([
-  {:membrane_nvidia_mmapi_plugin, path: "."},
-  :membrane_h264_plugin,
+  :membrane_nvidia_mmapi_plugin,
+  :membrane_h26x_plugin,
   :membrane_file_plugin,
   :req
 ])

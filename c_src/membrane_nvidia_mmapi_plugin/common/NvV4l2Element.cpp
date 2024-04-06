@@ -247,8 +247,7 @@ NvV4l2Element::abort()
     return ret;
 }
 
-int
-NvV4l2Element::waitForIdle(uint32_t max_wait_ms)
+int NvV4l2Element::waitForIdle([[maybe_unused]] uint32_t max_wait_ms)
 {
     COMP_ERROR_MSG("wait_for_idle not implemented");
     return 0;
