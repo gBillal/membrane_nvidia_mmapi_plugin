@@ -1,25 +1,26 @@
-defmodule Membrane.Template.Mixfile do
+defmodule Membrane.Nvidia.MMAPI.Mixfile do
   use Mix.Project
 
   @version "0.1.0"
-  @github_url "https://github.com/membraneframework/membrane_template_plugin"
+  @github_url "https://github.com/membraneframework/membrane_nvidia_mmapi_plugin"
 
   def project do
     [
-      app: :membrane_template_plugin,
+      app: :membrane_nvidia_mmapi_plugin,
       version: @version,
       elixir: "~> 1.13",
+      compilers: [:unifex, :bundlex] ++ Mix.compilers(),
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       dialyzer: dialyzer(),
 
       # hex
-      description: "Template Plugin for Membrane Framework",
+      description: "A collection of element that leverage Nvidia Jetson hardware using MMAPI",
       package: package(),
 
       # docs
-      name: "Membrane Template plugin",
+      name: "Membrane Nvidia Jetson plugin",
       source_url: @github_url,
       docs: docs()
     ]
@@ -37,9 +38,15 @@ defmodule Membrane.Template.Mixfile do
   defp deps do
     [
       {:membrane_core, "~> 1.0"},
+      {:unifex, "~> 1.2.0"},
+      {:membrane_h264_format, "~> 0.6.0"},
+      {:membrane_h265_format, "~> 0.2.0"},
+      {:membrane_raw_video_format, "~> 0.4.0"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:dialyxir, ">= 0.0.0", only: :dev, runtime: false},
-      {:credo, ">= 0.0.0", only: :dev, runtime: false}
+      {:credo, ">= 0.0.0", only: :dev, runtime: false},
+      {:membrane_file_plugin, "~> 0.17.0", only: :test},
+      {:membrane_h26x_plugin, "~> 0.10.0", only: :test}
     ]
   end
 
@@ -58,11 +65,10 @@ defmodule Membrane.Template.Mixfile do
 
   defp package do
     [
-      maintainers: ["Membrane Team"],
+      maintainers: ["Billal Ghilas"],
       licenses: ["Apache-2.0"],
       links: %{
-        "GitHub" => @github_url,
-        "Membrane Framework Homepage" => "https://membrane.stream"
+        "GitHub" => @github_url
       }
     ]
   end
@@ -73,7 +79,7 @@ defmodule Membrane.Template.Mixfile do
       extras: ["README.md", "LICENSE"],
       formatters: ["html"],
       source_ref: "v#{@version}",
-      nest_modules_by_prefix: [Membrane.Template]
+      nest_modules_by_prefix: [Membrane.Nvidia.MMAPI]
     ]
   end
 end
