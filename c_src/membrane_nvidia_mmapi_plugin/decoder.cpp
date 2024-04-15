@@ -62,7 +62,7 @@ void Decoder::process(unsigned char* data, int size, int64_t pts)
 void Decoder::flush()
 {
     this->m_eos = true;
-    this->qBuffer(NULL, 0, 0);
+    this->qBuffer(nullptr, 0, 0);
 }
 
 optional<pair<int, int64_t>> Decoder::nextFrame()
@@ -92,11 +92,6 @@ optional<pair<int, int64_t>> Decoder::nextFrame()
         throw std::runtime_error("could not dequeue buffer from capture plane");
     }
 
-    if (dqBuffer() < 0) 
-    {
-        throw std::runtime_error("could not dequeue buffer from output plane");
-    }
-
     NvBufSurf::NvCommonTransformParams transform_params;
     transform_params.flag = NVBUFSURF_TRANSFORM_FILTER;
     transform_params.flip = NvBufSurfTransform_None;
@@ -105,6 +100,11 @@ optional<pair<int, int64_t>> Decoder::nextFrame()
     if (NvBufSurf::NvTransform(&transform_params, buffer->planes[0].fd, this->m_dstDmaFd) < 0)
     {
         throw std::runtime_error("could not transform DMA buffer");
+    }
+
+    if (dqBuffer() < 0) 
+    {
+        throw std::runtime_error("could not dequeue buffer from output plane");
     }
 
     if (this->m_dec->capture_plane.qBuffer(v4l2_buf, NULL) < 0)
@@ -119,6 +119,7 @@ optional<pair<int, int64_t>> Decoder::nextFrame()
 Decoder::~Decoder()
 {
     while(dqBuffer() == 0);
+    m_dec->ClearPollInterrupt();
     delete this->m_dec;
     if (m_dstDmaFd != -1) NvBufSurf::NvDestroy(m_dstDmaFd);
 }
@@ -129,8 +130,8 @@ void Decoder::qBuffer(unsigned char* data, int size, int64_t pts)
     struct v4l2_plane planes[MAX_PLANES];
 
     NvBuffer* buffer = this->m_dec->output_plane.getNthBuffer(this->m_bufIdx);
-    if (data != NULL) {
-        buffer->planes[0].data = data;
+    if (data) {
+        memcpy(buffer->planes[0].data, data, size);
         buffer->planes[0].bytesused = size;
     } else {
         buffer->planes[0].bytesused = 0;
@@ -143,7 +144,7 @@ void Decoder::qBuffer(unsigned char* data, int size, int64_t pts)
     v4l2_buf.m.planes = planes;
     v4l2_buf.m.planes[0].bytesused = buffer->planes[0].bytesused;
     
-    if (data != NULL) {
+    if (data) {
         v4l2_buf.flags |= V4L2_BUF_FLAG_TIMESTAMP_COPY;
         v4l2_buf.timestamp.tv_sec = pts / Microsecond;
         v4l2_buf.timestamp.tv_usec = pts % Microsecond;

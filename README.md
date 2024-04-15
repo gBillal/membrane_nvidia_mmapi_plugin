@@ -1,6 +1,6 @@
 # Membrane Nvidia MMAPI Plugin
 
-[![Hex.pm](https://img.shields.io/hexpm/v/membrane_template_plugin.svg)](https://hex.pm/packages/membrane_template_plugin)
+[![Hex.pm](https://img.shields.io/hexpm/v/membrane_nvidia_mmapi_plugin.svg)](https://hex.pm/packages/membrane_nvidia_mmapi_plugin)
 [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_nvidia_mmapi_plugin)
 
 A collection of elements that leverage the Nvidia Jetson hardware using [Multimedia API](https://docs.nvidia.com/jetson/l4t-multimedia/mmapi_group.html)
@@ -20,7 +20,7 @@ Add the following line to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:membrane_nvidia_mmapi_plugin, "~> 0.1.0"}
+    {:membrane_nvidia_mmapi_plugin, "~> 0.1.1"}
   ]
 end
 ```

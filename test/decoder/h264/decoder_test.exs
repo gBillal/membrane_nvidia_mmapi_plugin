@@ -54,5 +54,9 @@ defmodule DecoderTest do
     test "decode 10 720p frames with B frames in main profile", ctx do
       perform_decoding_test("10-720p-main", ctx.tmp_dir, 5000)
     end
+
+    test "decode 110 variable resolution frames", ctx do
+      perform_decoding_test("110-variable", ctx.tmp_dir, 5000)
+    end
   end
 end

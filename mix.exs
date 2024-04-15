@@ -1,8 +1,8 @@
 defmodule Membrane.Nvidia.MMAPI.Mixfile do
   use Mix.Project
 
-  @version "0.1.0"
-  @github_url "https://github.com/membraneframework/membrane_nvidia_mmapi_plugin"
+  @version "0.1.1"
+  @github_url "https://github.com/gBillal/membrane_nvidia_mmapi_plugin"
 
   def project do
     [
