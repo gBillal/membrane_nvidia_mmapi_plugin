@@ -64,5 +64,9 @@ defmodule H265.DecoderTest do
     test "decode 30 480p frames with no b-frames", ctx do
       perform_decoding_test("30-480p-no-bframes", ctx.tmp_dir, 5000)
     end
+
+    test "decode 45 variable resolution frames", ctx do
+      perform_decoding_test("45-variable", ctx.tmp_dir, 5000)
+    end
   end
 end

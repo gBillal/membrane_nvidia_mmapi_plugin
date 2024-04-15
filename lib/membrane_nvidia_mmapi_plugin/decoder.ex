@@ -58,30 +58,30 @@ defmodule Membrane.Nvidia.MMAPI.Decoder do
     {width, height} = dimensions(stream_format, state)
     framerate = stream_format.framerate || {0, 1}
 
-    cond do
-      is_nil(old_stream_format) ->
-        codec =
-          case stream_format do
-            %H264{} -> :H264
-            %H265{} -> :H265
-          end
+    if is_nil(old_stream_format) or old_stream_format != stream_format do
+      codec =
+        case stream_format do
+          %H264{} -> :H264
+          %H265{} -> :H265
+        end
 
-        stream_format = %RawVideo{
-          width: width,
-          height: height,
-          pixel_format: :I420,
-          aligned: true,
-          framerate: framerate
-        }
+      stream_format = %RawVideo{
+        width: width,
+        height: height,
+        pixel_format: :I420,
+        aligned: true,
+        framerate: framerate
+      }
 
-        {[stream_format: {:output, stream_format}],
-         %{state | decoder_ref: Native.create!(codec, width, height)}}
+      {actions, state} =
+        if state.decoder_ref,
+          do: flush(state),
+          else: {[], state}
 
-      old_stream_format != stream_format ->
-        raise "This element does not support different stream format."
-
-      true ->
-        {[], state}
+      {actions ++ [stream_format: {:output, stream_format}],
+       %{state | decoder_ref: Native.create!(codec, width, height)}}
+    else
+      {[], state}
     end
   end
 
@@ -98,9 +98,14 @@ defmodule Membrane.Nvidia.MMAPI.Decoder do
 
   @impl true
   def handle_end_of_stream(:input, _ctx, state) do
+    {actions, state} = flush(state)
+    {actions ++ [end_of_stream: :output], state}
+  end
+
+  defp flush(state) do
     case Native.flush(state.decoder_ref) do
       {:ok, frames, pts_list} ->
-        {wrap_frames(frames, pts_list) ++ [end_of_stream: :output], state}
+        {wrap_frames(frames, pts_list), state}
 
       {:error, reason} ->
         raise "Native decoder failed to flush: #{inspect(reason)}"
