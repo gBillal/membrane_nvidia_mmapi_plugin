@@ -20,7 +20,7 @@ Add the following line to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:membrane_nvidia_mmapi_plugin, "~> 0.1.0"}
+    {:membrane_nvidia_mmapi_plugin, "~> 0.1.1"}
   ]
 end
 ```
