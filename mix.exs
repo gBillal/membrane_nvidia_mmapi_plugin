@@ -1,7 +1,7 @@
 defmodule Membrane.Nvidia.MMAPI.Mixfile do
   use Mix.Project
 
-  @version "0.1.1"
+  @version "0.1.2"
   @github_url "https://github.com/gBillal/membrane_nvidia_mmapi_plugin"
 
   def project do
@@ -69,7 +69,9 @@ defmodule Membrane.Nvidia.MMAPI.Mixfile do
       licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => @github_url
-      }
+      },
+      files: ["lib", "mix.exs", "README*", "LICENSE*", ".formatter.exs", "bundlex.exs", "c_src"],
+      exclude_patterns: [~r"c_src/.*/_generated.*"]
     ]
   end
 
